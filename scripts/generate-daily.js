@@ -87,7 +87,7 @@ function getSelectionSettings(config) {
 
   return {
     minRelevanceScore: reportSettings.minRelevanceScore ?? sourceSettings.minRelevanceScore ?? 0.3,
-    maxArticlesPerCategory: reportSettings.maxArticlesPerCategory ?? sourceSettings.maxArticlesPerCategory ?? 30,
+    maxArticlesPerCategory: sourceSettings.maxArticlesPerCategory ?? 30,
     maxTotalArticles: reportSettings.maxTotalArticles ?? Number.MAX_SAFE_INTEGER,
     highQualityThreshold: reportSettings.highQualityThreshold ?? sourceSettings.highQualityThreshold ?? 0.7,
     topHighlightsCount: reportSettings.topHighlightsCount ?? 5,

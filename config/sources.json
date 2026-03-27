@@ -2,7 +2,7 @@
   "version": "1.0",
   "globalSettings": {
     "minRelevanceScore": 0.3,
-    "maxArticlesPerCategory": 30,
+    "maxArticlesPerCategory": 15,
     "highQualityThreshold": 0.7,
     "sourcePriorityWeights": {
       "high": 1.2,

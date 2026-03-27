@@ -6,21 +6,13 @@
       "host": "smtp.qq.com",
       "port": 587,
       "secure": false,
-      "user": "yelbee@qq.com",
-      "pass": "fymbemxciychbfad",
-      "from": "yelbee@qq.com"
+      "user": "xxxx@qq.com",
+      "pass": "xxxx",
+      "from": "xxxx@qq.com"
     },
     "recipients": [
-      "yelbee@qq.com",
-      "chenwei01@poissonsoft.com",
-      "yangrongfeng@poissonsoft.com",
-      "liaozijie@poissonsoft.com",
-      "jiazhendong@poissonsoft.com",
-      "zhangchicheng@poissonsoft.com",
-      "jiaoyidi@poissonsoft.com",
-      "1526081829@qq.com",
-      "lyt1520996883@gmail.com",
-      "huangjinghong@poissonsoft.com"
+      "xxxxx@qq.com",
+      "xxxxxx@gmail.com"
     ],
     "subject": "AI日报 - {date}",
     "format": "html"
@@ -35,7 +27,6 @@
   },
   "report": {
     "maxTotalArticles": 50,
-    "maxArticlesPerCategory": 15,
     "topHighlightsCount": 5,
     "categoryWeights": {
       "ai_tech": 4,
@@ -53,7 +44,7 @@
   "ai": {
     "enabled": true,
     "baseURL": "https://dashscope.aliyuncs.com/compatible-mode/v1",
-    "apiKey": "sk-2ccecfb6ac1047b596fd14b0467debbb",
+    "apiKey": "xxxxxxxx",
     "model": "qwen3.5-flash",
     "maxTokens": 1024
   },
