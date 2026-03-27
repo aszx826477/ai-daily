@@ -10,6 +10,14 @@
       "low": 0.8
     }
   },
+  "dailyReading": {
+    "enabled": true,
+    "title": "Designing AI-resistant technical evaluations",
+    "source": "Anthropic Engineering",
+    "url": "https://www.anthropic.com/engineering/AI-resistant-technical-evaluations",
+    "maxInputChars": 18000,
+    "maxOutputTokens": 2200
+  },
   "categories": {
     "ai_tech": {
       "name": "AI科技",
@@ -65,7 +73,7 @@
         {
           "name": "虎嗅",
           "type": "rss",
-          "url": "https://www.huxiu.com/rss/0.xml",
+          "url": "https://rss.huxiu.com/",
           "enabled": true,
           "priority": "high"
         },

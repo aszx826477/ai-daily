@@ -7,6 +7,8 @@ import fs from 'fs';
 import path from 'path';
 import { fileURLToPath } from 'url';
 import OpenAI from 'openai';
+import fetch from 'node-fetch';
+import MarkdownIt from 'markdown-it';
 import { fetchRSS, fetchWeb } from './fetcher.js';
 import { formatShanghaiArticleDate, formatShanghaiDate, formatShanghaiDisplayDate } from './timezone.js';
 import { getCurrentLogFile, initializeRunLogger, log } from './logger.js';
@@ -14,6 +16,23 @@ import { getCurrentLogFile, initializeRunLogger, log } from './logger.js';
 const __filename = fileURLToPath(import.meta.url);
 const __dirname = path.dirname(__filename);
 const ROOT_DIR = path.dirname(__dirname);
+
+const markdownRenderer = new MarkdownIt({
+  html: false,
+  linkify: true,
+  breaks: false,
+  typographer: false,
+});
+
+const defaultLinkOpenRenderer = markdownRenderer.renderer.rules.link_open
+  || ((tokens, idx, options, env, self) => self.renderToken(tokens, idx, options));
+
+markdownRenderer.renderer.rules.link_open = (tokens, idx, options, env, self) => {
+  const token = tokens[idx];
+  token.attrSet('target', '_blank');
+  token.attrSet('rel', 'noopener noreferrer');
+  return defaultLinkOpenRenderer(tokens, idx, options, env, self);
+};
 
 function loadConfig() {
   return {
@@ -330,41 +349,243 @@ function escapeHTML(value) {
     .replace(/'/g, '&#39;');
 }
 
-function formatInlineMarkdown(text) {
-  return escapeHTML(text)
-    .replace(/\*\*(.+?)\*\*/g, '<strong>$1</strong>')
-    .replace(/\*(.+?)\*/g, '<em>$1</em>')
-    .replace(/`(.+?)`/g, '<code>$1</code>')
-    .replace(/\[(.+?)\]\((https?:\/\/[^\s)]+)\)/g, '<a href="$2" target="_blank" rel="noopener noreferrer">$1</a>');
-}
-
 function renderMarkdownToHTML(markdown) {
   if (!markdown) return '';
 
   const normalized = markdown.replace(/\r\n/g, '\n').trim();
   if (!normalized) return '';
 
-  const blocks = normalized.split(/\n\s*\n/);
-  const htmlBlocks = blocks.map((block) => {
-    const lines = block.split('\n').map(line => line.trim()).filter(Boolean);
-    if (lines.length === 0) return '';
+  return markdownRenderer.render(normalized);
+}
 
-    const unorderedList = lines.every(line => /^[-*]\s+/.test(line));
-    if (unorderedList) {
-      const items = lines.map(line => `<li>${formatInlineMarkdown(line.replace(/^[-*]\s+/, ''))}</li>`).join('');
-      return `<ul>${items}</ul>`;
+function formatOptionalArticleDate(dateInput) {
+  if (!dateInput) return '发布时间未标注';
+  const parsedDate = new Date(dateInput);
+  if (Number.isNaN(parsedDate.getTime())) return '发布时间未标注';
+  return formatShanghaiArticleDate(parsedDate);
+}
+
+function decodeHTMLEntities(value) {
+  return String(value || '')
+    .replace(/&nbsp;/gi, ' ')
+    .replace(/&amp;/gi, '&')
+    .replace(/&lt;/gi, '<')
+    .replace(/&gt;/gi, '>')
+    .replace(/&quot;/gi, '"')
+    .replace(/&#39;/gi, "'")
+    .replace(/&#x27;/gi, "'")
+    .replace(/&#x2F;/gi, '/')
+    .replace(/&#(\d+);/g, (_, code) => String.fromCharCode(Number(code)))
+    .replace(/&#x([\da-fA-F]+);/g, (_, code) => String.fromCharCode(parseInt(code, 16)));
+}
+
+function stripHTML(value) {
+  return decodeHTMLEntities(
+    String(value || '')
+      .replace(/<br\s*\/?>/gi, '\n')
+      .replace(/<\/p>/gi, '\n\n')
+      .replace(/<\/div>/gi, '\n')
+      .replace(/<[^>]+>/g, ' ')
+  )
+    .replace(/\r/g, '')
+    .replace(/[ \t]+/g, ' ')
+    .replace(/\n{3,}/g, '\n\n')
+    .trim();
+}
+
+function extractMetaContent(html, patterns) {
+  for (const pattern of patterns) {
+    const match = html.match(pattern);
+    if (match?.[1]) return decodeHTMLEntities(match[1]).trim();
+  }
+  return '';
+}
+
+function cleanArticleHTML(html) {
+  return String(html || '')
+    .replace(/<script\b[^>]*>[\s\S]*?<\/script>/gi, ' ')
+    .replace(/<style\b[^>]*>[\s\S]*?<\/style>/gi, ' ')
+    .replace(/<noscript\b[^>]*>[\s\S]*?<\/noscript>/gi, ' ')
+    .replace(/<svg\b[^>]*>[\s\S]*?<\/svg>/gi, ' ')
+    .replace(/<(header|footer|nav|form|button|aside)\b[^>]*>[\s\S]*?<\/\1>/gi, ' ');
+}
+
+function htmlToStructuredText(html) {
+  return decodeHTMLEntities(
+    cleanArticleHTML(html)
+      .replace(/<h1\b[^>]*>([\s\S]*?)<\/h1>/gi, '\n# $1\n\n')
+      .replace(/<h2\b[^>]*>([\s\S]*?)<\/h2>/gi, '\n## $1\n\n')
+      .replace(/<h3\b[^>]*>([\s\S]*?)<\/h3>/gi, '\n### $1\n\n')
+      .replace(/<h4\b[^>]*>([\s\S]*?)<\/h4>/gi, '\n#### $1\n\n')
+      .replace(/<p\b[^>]*>([\s\S]*?)<\/p>/gi, '\n$1\n')
+      .replace(/<blockquote\b[^>]*>([\s\S]*?)<\/blockquote>/gi, '\n> $1\n')
+      .replace(/<li\b[^>]*>([\s\S]*?)<\/li>/gi, '\n- $1')
+      .replace(/<pre\b[^>]*>([\s\S]*?)<\/pre>/gi, '\n````\n$1\n````\n')
+      .replace(/<code\b[^>]*>([\s\S]*?)<\/code>/gi, '`$1`')
+      .replace(/<br\s*\/?>/gi, '\n')
+      .replace(/<[^>]+>/g, ' ')
+  )
+    .replace(/\r/g, '')
+    .replace(/[ \t]+/g, ' ')
+    .replace(/\n[ \t]+/g, '\n')
+    .replace(/\n{3,}/g, '\n\n')
+    .trim();
+}
+
+function extractArticleContent(html, url) {
+  const cleanedHTML = cleanArticleHTML(html);
+  const title = extractMetaContent(cleanedHTML, [
+    /<meta[^>]+property=["']og:title["'][^>]+content=["']([^"']+)["']/i,
+    /<meta[^>]+name=["']twitter:title["'][^>]+content=["']([^"']+)["']/i,
+    /<title[^>]*>([^<]+)<\/title>/i
+  ]);
+
+  const description = extractMetaContent(cleanedHTML, [
+    /<meta[^>]+name=["']description["'][^>]+content=["']([^"']+)["']/i,
+    /<meta[^>]+property=["']og:description["'][^>]+content=["']([^"']+)["']/i
+  ]);
+
+  const publishedAt = extractMetaContent(cleanedHTML, [
+    /<meta[^>]+property=["']article:published_time["'][^>]+content=["']([^"']+)["']/i,
+    /<time[^>]+datetime=["']([^"']+)["']/i
+  ]);
+
+  const candidateBlocks = [];
+  const articlePatterns = [
+    /<article\b[^>]*>([\s\S]*?)<\/article>/gi,
+    /<main\b[^>]*>([\s\S]*?)<\/main>/gi,
+    /<(section|div)\b[^>]*(?:class|id)=["'][^"']*(?:article|post|content|body|prose|markdown)[^"']*["'][^>]*>([\s\S]*?)<\/\1>/gi
+  ];
+
+  for (const pattern of articlePatterns) {
+    let match;
+    while ((match = pattern.exec(cleanedHTML)) !== null) {
+      const block = match[2] || match[1] || '';
+      const text = htmlToStructuredText(block);
+      if (text.length >= 600) {
+        candidateBlocks.push(text);
+      }
+    }
+  }
+
+  if (candidateBlocks.length === 0) {
+    candidateBlocks.push(htmlToStructuredText(cleanedHTML));
+  }
+
+  candidateBlocks.sort((a, b) => b.length - a.length);
+  const content = candidateBlocks[0] || '';
+
+  return {
+    url,
+    title: title.replace(/\s*[|-].*$/, '').trim() || url,
+    description,
+    publishedAt,
+    content
+  };
+}
+
+async function fetchDailyReadingArticle(dailyReadingConfig) {
+  if (!dailyReadingConfig?.enabled || !dailyReadingConfig.url) return null;
+
+  log.info(`\n📚 抓取每日精读文章: ${dailyReadingConfig.url}`);
+  const response = await fetch(dailyReadingConfig.url, {
+    headers: {
+      'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36',
+      'Accept': 'text/html,application/xhtml+xml',
+      'Accept-Language': 'zh-CN,zh;q=0.9,en;q=0.8'
+    },
+    timeout: 20000,
+    redirect: 'follow'
+  });
+
+  if (!response.ok) {
+    throw new Error(`请求失败: HTTP ${response.status}`);
+  }
+
+  const html = await response.text();
+  const article = extractArticleContent(html, dailyReadingConfig.url);
+  if (!article.content || article.content.length < 800) {
+    throw new Error('正文提取失败，文章内容不足');
+  }
+
+  article.configTitle = dailyReadingConfig.title || '';
+  article.source = dailyReadingConfig.source || new URL(dailyReadingConfig.url).hostname;
+  article.maxInputChars = dailyReadingConfig.maxInputChars || 18000;
+  article.maxOutputTokens = dailyReadingConfig.maxOutputTokens || 2200;
+
+  log.success(`每日精读正文提取成功: ${article.content.length} 字符`);
+  return article;
+}
+
+function buildDailyReadingPrompt(article) {
+  const articleText = article.content.slice(0, article.maxInputChars);
+  return `你是一位擅长长文精读的研究编辑。请对下面这篇研究/工程文章进行“每日精读”，要求忠实还原原文论证结构与核心观点，不要脱离原文任意发挥，也不要写成流水账。
+
+输出要求：
+1. 使用中文输出。
+2. 先给出“核心摘要”，控制在120字以内。
+3. 再给出“文章结构”，按原文主要章节或论证推进列出3-6点。
+4. 再给出“关键观点”，提炼4-6点，每点都要说明作者的主张、依据或例子。
+5. 再给出“我的启发”，总结2-3点值得持续关注的趋势或方法。
+6. 全文控制在700-1200字，既完整又凝练。
+7. 如果原文存在时间线、实验结果、对比数据或版本迭代，请保留这些关键信息。
+8. 使用 Markdown 输出，允许二级标题和项目符号。
+
+文章标题：${article.title}
+文章来源：${article.source}
+文章链接：${article.url}
+发布时间：${article.publishedAt || '未标注'}
+原文摘要：${article.description || '无'}
+
+原文正文：
+${articleText}`;
+}
+
+async function generateDailyReading(dailyReadingConfig, settings) {
+  const aiConfig = settings.ai;
+  if (!dailyReadingConfig?.enabled || !dailyReadingConfig.url) return null;
+  if (!aiConfig?.enabled) {
+    log.warn('每日精读已启用，但 AI 配置未启用');
+    return null;
+  }
+
+  try {
+    const article = await fetchDailyReadingArticle(dailyReadingConfig);
+    const client = new OpenAI({
+      apiKey: aiConfig.apiKey,
+      baseURL: aiConfig.baseURL,
+    });
+
+    log.info('\n🤖 调用 AI 生成每日精读...');
+    const response = await client.chat.completions.create({
+      model: aiConfig.model,
+      messages: [{ role: 'user', content: buildDailyReadingPrompt(article) }],
+      max_tokens: article.maxOutputTokens,
+      temperature: 0.4,
+    });
+
+    const analysis = response.choices?.[0]?.message?.content?.trim();
+    if (!analysis) {
+      log.warn('每日精读返回内容为空');
+      return null;
     }
 
-    const orderedList = lines.every(line => /^\d+\.\s+/.test(line));
-    if (orderedList) {
-      const items = lines.map(line => `<li>${formatInlineMarkdown(line.replace(/^\d+\.\s+/, ''))}</li>`).join('');
-      return `<ol>${items}</ol>`;
-    }
-
-    return `<p>${lines.map(line => formatInlineMarkdown(line)).join('<br>')}</p>`;
-  }).filter(Boolean);
-
-  return htmlBlocks.join('');
+    log.success('每日精读生成成功');
+    return {
+      title: article.configTitle || article.title,
+      articleTitle: article.title,
+      source: article.source,
+      url: article.url,
+      publishedAt: article.publishedAt,
+      description: article.description,
+      contentLength: article.content.length,
+      inputChars: Math.min(article.content.length, article.maxInputChars),
+      analysis,
+    };
+  } catch (error) {
+    log.error(`每日精读生成失败: ${error.message}`);
+    return null;
+  }
 }
 
 // ========== AI 解读 ==========
@@ -417,12 +638,13 @@ ${headlines.join('\n')}`;
 const BAR_COLORS = ['#667eea','#38b2ac','#e53e3e','#dd6b20','#d69e2e','#805ad5','#3182ce','#48bb78'];
 
 function generateHTML(data) {
-  const { date, articles, stats, config, aiInterpretation, topHighlights } = data;
+  const { date, articles, stats, config, aiInterpretation, topHighlights, dailyReading } = data;
   const reportDate = date || formatShanghaiDate();
   const dateStr = formatShanghaiDisplayDate(reportDate);
   const sourceDist = generateSourceDist(articles);
   const categoryDist = generateCategoryDist(articles);
   const aiInterpretationHTML = renderMarkdownToHTML(aiInterpretation);
+  const dailyReadingHTML = renderMarkdownToHTML(dailyReading?.analysis || '');
 
   const barHTML = categoryDist.map(cat =>
     `<div class="bar-row">
@@ -497,6 +719,27 @@ function generateHTML(data) {
       ${articleListHTML}
     </div>`;
   }
+
+  const dailyReadingSectionHTML = dailyReading && dailyReadingHTML ? `
+  <div class="daily-reading-section">
+    <div class="daily-reading-title">📖 每日精读</div>
+    <div class="daily-reading-card">
+      <div class="daily-reading-head">
+        <div>
+          <div class="daily-reading-article-title"><a href="${dailyReading.url}" target="_blank" rel="noopener noreferrer">${escapeHTML(dailyReading.articleTitle || dailyReading.title || '原文链接')}</a></div>
+          <div class="daily-reading-meta">
+            <span>${escapeHTML(dailyReading.source || '')}</span>
+            <span>${escapeHTML(formatOptionalArticleDate(dailyReading.publishedAt))}</span>
+            <span>正文约 ${dailyReading.contentLength || dailyReading.inputChars || 0} 字符</span>
+          </div>
+        </div>
+        <a class="daily-reading-link" href="${dailyReading.url}" target="_blank" rel="noopener noreferrer">查看原文</a>
+      </div>
+      ${dailyReading.description ? `<div class="daily-reading-desc">${escapeHTML(dailyReading.description)}</div>` : ''}
+      <div class="daily-reading-content">${dailyReadingHTML}</div>
+      <div class="daily-reading-footer">基于 ${escapeHTML(config.settings.ai.model)} 自动精读，强调结构还原与观点浓缩</div>
+    </div>
+  </div>` : '';
 
   return `<!DOCTYPE html>
 <html lang="zh-CN">
@@ -577,6 +820,27 @@ body{font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',Roboto,'Helvetica N
 .top-main .top-title{font-size:1.02em;font-weight:600;color:#2d3748;margin-bottom:6px}
 .top-main .top-title a{color:#8c5a00;text-decoration:none}
 .top-main .top-title a:hover{text-decoration:underline}
+.daily-reading-section{background:linear-gradient(135deg,#f5fbf7 0%,#eef8ff 100%);border:1px solid #cfe7da;border-radius:12px;padding:22px 24px;margin-bottom:24px}
+.daily-reading-title{font-size:1.14em;font-weight:700;color:#21543d;margin-bottom:14px}
+.daily-reading-card{background:rgba(255,255,255,.82);border:1px solid rgba(33,84,61,.1);border-radius:12px;padding:18px 18px 16px;backdrop-filter:blur(4px)}
+.daily-reading-head{display:flex;justify-content:space-between;gap:12px;align-items:flex-start;margin-bottom:12px}
+.daily-reading-article-title{font-size:1.04em;font-weight:600;line-height:1.5}
+.daily-reading-article-title a{color:#21543d;text-decoration:none}
+.daily-reading-article-title a:hover{text-decoration:underline}
+.daily-reading-meta{display:flex;flex-wrap:wrap;gap:8px 14px;font-size:.8em;color:#5f7a6d;margin-top:6px}
+.daily-reading-link{display:inline-flex;align-items:center;justify-content:center;padding:8px 12px;background:#21543d;color:#fff;border-radius:999px;text-decoration:none;font-size:.82em;white-space:nowrap}
+.daily-reading-link:hover{background:#173b2b}
+.daily-reading-desc{font-size:.86em;color:#5c6b63;background:#f6fbf8;border-radius:8px;padding:10px 12px;margin-bottom:14px}
+.daily-reading-content{font-size:.93em;color:#33423b;line-height:1.9}
+.daily-reading-content p{margin:0 0 12px}
+.daily-reading-content p:last-child{margin-bottom:0}
+.daily-reading-content strong{color:#173b2b}
+.daily-reading-content code{font-family:'Consolas','SFMono-Regular',monospace;background:#e6f4ec;color:#21543d;padding:1px 6px;border-radius:4px}
+.daily-reading-content ul,.daily-reading-content ol{margin:0 0 12px 22px}
+.daily-reading-content li{margin-bottom:6px}
+.daily-reading-content a{color:#21543d}
+.daily-reading-footer{margin-top:12px;font-size:.76em;color:#7c9086;text-align:right}
+@media(max-width:640px){.daily-reading-head{flex-direction:column}.daily-reading-link{width:100%}}
 @media(max-width:640px){.top-item{flex-direction:column;gap:8px}.top-rank{min-width:auto;width:72px}}
 </style>
 </head>
@@ -611,6 +875,7 @@ body{font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',Roboto,'Helvetica N
     </div>
   </div>
   ${sectionsHTML}
+  ${dailyReadingSectionHTML}
   <div class="footer">
     <p>AI日报系统 自动生成</p>
     <p style="margin-top:8px;font-size:.82em">配置文件: config/sources.json | 定时发送: 每天 09:00</p>
@@ -649,7 +914,9 @@ async function main() {
     log.info('\n🧠 调用AI大模型生成今日解读...');
     const aiInterpretation = await generateAIInterpretation(articles, config.settings);
 
-    const html = generateHTML({ date, articles, stats, config, aiInterpretation, topHighlights });
+    const dailyReading = await generateDailyReading(config.sources.dailyReading, config.settings);
+
+    const html = generateHTML({ date, articles, stats, config, aiInterpretation, topHighlights, dailyReading });
 
     const outputDir = path.join(ROOT_DIR, 'output');
     if (!fs.existsSync(outputDir)) fs.mkdirSync(outputDir, { recursive: true });
@@ -658,12 +925,12 @@ async function main() {
     log.success(`HTML已保存: ${filepath}`);
 
     const jsonFile = path.join(outputDir, `daily-report-${date}.json`);
-  fs.writeFileSync(jsonFile, JSON.stringify({ date, articles, topHighlights, stats }, null, 2), 'utf-8');
+  fs.writeFileSync(jsonFile, JSON.stringify({ date, articles, topHighlights, stats, dailyReading }, null, 2), 'utf-8');
     log.success(`JSON已保存: ${jsonFile}`);
 
     const elapsed = ((Date.now() - startTime) / 1000).toFixed(2);
     log.success(`\n✅ 日报生成完成，耗时 ${elapsed}s`);
-    return { date, filepath, stats, articles, topHighlights, logFile: getCurrentLogFile() };
+    return { date, filepath, stats, articles, topHighlights, dailyReading, logFile: getCurrentLogFile() };
   } catch (error) {
     log.error('日报生成失败:', error);
     throw error;

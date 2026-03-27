@@ -13,6 +13,7 @@
   },
   "dependencies": {
     "fast-xml-parser": "^4.5.5",
+    "markdown-it": "^14.1.1",
     "node-fetch": "^3.3.2",
     "nodemailer": "^6.9.8",
     "openai": "^6.32.0",

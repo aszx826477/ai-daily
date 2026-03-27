@@ -2,6 +2,8 @@
 
 自动抓取多分类资讯，生成 HTML 日报并通过邮件发送。当前聚焦中文 RSS 和网页抓取场景，支持统一时区处理、按关键词相关性重分类，以及按信息源优先级控制分类内的来源分布。
 
+同时支持“每日精读”：从指定长文章 URL 抓取正文，调用大模型生成结构化深读摘要，并追加到日报底部。
+
 ## 当前能力
 
 - 真实抓取：仅保留 RSS 和 Web 两种抓取方式
@@ -9,6 +11,7 @@
 - 重分类：文章会按关键词匹配度重新归类到最合适的分类
 - 来源均衡：按 priority 对应的统一权重分配每个分类内的信息源配额
 - 日报生成：输出 HTML 和 JSON 两种结果文件
+- 每日精读：对 sources.json 中配置的一篇长文生成结构化精读
 - 邮件发送：支持 QQ 邮箱 SMTP 批量发送
 - 定时任务：支持通过 OpenClaw cron 定时触发
 - 统一时区：抓取过滤、文件命名、页面展示统一使用 Asia/Shanghai
@@ -57,6 +60,9 @@ npm install
 - globalSettings.maxArticlesPerCategory：每个分类最多收录条数
 - globalSettings.highQualityThreshold：高质量内容阈值
 - globalSettings.sourcePriorityWeights：high、medium、low 三档优先级的来源配额权重
+- dailyReading.url：每日精读原文地址
+- dailyReading.maxInputChars：送入模型的正文最大字符数
+- dailyReading.maxOutputTokens：每日精读输出 token 上限
 - categories.*.keywords：分类关键词
 - categories.*.sources：分类下的信息源
 
@@ -73,6 +79,14 @@ npm install
       "medium": 1,
       "low": 0.8
     }
+  },
+  "dailyReading": {
+    "enabled": true,
+    "title": "Designing AI-resistant technical evaluations",
+    "source": "Anthropic Engineering",
+    "url": "https://www.anthropic.com/engineering/AI-resistant-technical-evaluations",
+    "maxInputChars": 18000,
+    "maxOutputTokens": 2200
   },
   "categories": {
     "ai_tech": {
@@ -169,6 +183,14 @@ node scripts/cron-task.js
 - high 优先级来源会获得更多分类内名额
 - medium 和 low 会按统一系数缩减
 - 调整配额策略时，只需要修改一处全局配置
+
+## 每日精读
+
+- 每次生成日报时，会读取 [config/sources.json](config/sources.json) 中的 dailyReading 配置
+- 系统会抓取该 URL 的文章正文，并尽量保留标题、章节和段落结构
+- 之后调用 [config/settings.json](config/settings.json) 中配置的 AI 模型生成一篇中文精读
+- 默认输出包含：核心摘要、文章结构、关键观点、我的启发
+- 结果会同时写入 HTML 日报底部和 JSON 输出文件中的 dailyReading 字段
 
 ## 时区规则
 
