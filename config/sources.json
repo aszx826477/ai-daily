@@ -1,0 +1,302 @@
+{
+  "version": "1.0",
+  "globalSettings": {
+    "minRelevanceScore": 0.3,
+    "maxArticlesPerCategory": 30,
+    "highQualityThreshold": 0.7,
+    "sourcePriorityWeights": {
+      "high": 1.2,
+      "medium": 1,
+      "low": 0.8
+    }
+  },
+  "categories": {
+    "ai_tech": {
+      "name": "AI科技",
+      "enabled": true,
+      "keywords": [
+        "人工智能",
+        "AI",
+        "LLM",
+        "大模型",
+        "GPT",
+        "Claude",
+        "ChatGPT",
+        "机器学习",
+        "深度学习",
+        "神经网络",
+        "AIGC",
+        "AGI",
+        "多模态",
+        "Agent",
+        "RAG",
+        "Transformer",
+        "GPU",
+        "算力",
+        "推理模型",
+        "OpenAI",
+        "Anthropic",
+        "Gemini",
+        "Claude3",
+        "Sora",
+        "文生视频",
+        "AI编程",
+        "Copilot",
+        "Cursor",
+        "AI Agent",
+        "LLM应用",
+        "RAG应用",
+        "向量数据库",
+        "AI芯片",
+        "AI服务器",
+        "云计算",
+        "大模型训练",
+        "AI部署",
+        "边缘AI"
+      ],
+      "sources": [
+        {
+          "name": "36氪",
+          "type": "rss",
+          "url": "https://36kr.com/feed",
+          "enabled": true,
+          "priority": "high"
+        },
+        {
+          "name": "虎嗅",
+          "type": "rss",
+          "url": "https://www.huxiu.com/rss/0.xml",
+          "enabled": true,
+          "priority": "high"
+        },
+        {
+          "name": "量子位",
+          "type": "rss",
+          "url": "https://www.qbitai.com/feed",
+          "enabled": true,
+          "priority": "high"
+        },
+        {
+          "name": "InfoQ",
+          "type": "rss",
+          "url": "https://www.infoq.cn/feed",
+          "enabled": true,
+          "priority": "medium"
+        },
+        {
+          "name": "钛媒体",
+          "type": "rss",
+          "url": "https://www.tmtpost.com/rss.xml",
+          "enabled": true,
+          "priority": "medium"
+        },
+        {
+          "name": "IT之家",
+          "type": "rss",
+          "url": "https://www.ithome.com/rss",
+          "enabled": true,
+          "priority": "low"
+        }
+      ]
+    },
+    "shenzhen_real_estate": {
+      "name": "深圳房产",
+      "enabled": true,
+      "keywords": [
+        "深圳",
+        "房产",
+        "房价",
+        "买房",
+        "卖房",
+        "学区房",
+        "二手房",
+        "新房",
+        "豪宅",
+        "深圳湾",
+        "南山",
+        "福田",
+        "罗湖",
+        "宝安",
+        "龙岗",
+        "龙华",
+        "光明",
+        "坪山",
+        "盐田",
+        "购房",
+        "限购",
+        "房贷",
+        "利率",
+        "房地产",
+        "中介",
+        "租房",
+        "租金",
+        "笋盘",
+        "户型",
+        "开盘",
+        "热销"
+      ],
+      "sources": [
+        {
+          "name": "深圳房天下",
+          "type": "web",
+          "url": "https://sz.fang.com/",
+          "enabled": true,
+          "priority": "high"
+        },
+        {
+          "name": "深圳安居客",
+          "type": "web",
+          "url": "https://sz.anjuke.com/",
+          "enabled": true,
+          "priority": "high"
+        },
+        {
+          "name": "深圳买房",
+          "type": "web",
+          "url": "https://www.szhome.com/",
+          "enabled": true,
+          "priority": "medium"
+        }
+      ]
+    },
+    "war_situation": {
+      "name": "国际战火形势",
+      "enabled": true,
+      "keywords": [
+        "战争",
+        "军事",
+        "冲突",
+        "乌克兰",
+        "俄罗斯",
+        "以色列",
+        "加沙",
+        "哈马斯",
+        "黎巴嫩",
+        "伊朗",
+        "朝鲜",
+        "朝鲜半岛",
+        "台海",
+        "南海",
+        "中美",
+        "美国",
+        "北约",
+        "俄罗斯",
+        "伊朗",
+        "导弹",
+        "核武器",
+        "军演",
+        "武器",
+        "坦克",
+        "战斗机",
+        "航母",
+        "海军",
+        "空军",
+        "陆军",
+        "防空",
+        "制裁",
+        "军事援助",
+        "战场",
+        "局势",
+        "动态",
+        "新闻"
+      ],
+      "sources": [
+        {
+          "name": "网易军事",
+          "type": "web",
+          "url": "https://war.163.com/",
+          "enabled": true,
+          "priority": "high"
+        },
+        {
+          "name": "凤凰军事",
+          "type": "web",
+          "url": "https://mil.ifeng.com/",
+          "enabled": true,
+          "priority": "high"
+        },
+        {
+          "name": "中华军事",
+          "type": "web",
+          "url": "https://military.china.com/",
+          "enabled": true,
+          "priority": "medium"
+        }
+      ]
+    },
+    "medical_health": {
+      "name": "医疗与健康",
+      "enabled": true,
+      "keywords": [
+        "医疗",
+        "健康",
+        "医药",
+        "生物",
+        "疾病",
+        "治疗",
+        "诊断",
+        "手术",
+        "康复",
+        "医保",
+        "养生",
+        "保健",
+        "体检",
+        "中医",
+        "西医",
+        "临床",
+        "疫苗",
+        "病毒",
+        "疫情",
+        "防控",
+        "公共卫生",
+        "心理健康",
+        "慢病",
+        "创新药",
+        "新药",
+        "研发",
+        "临床试验",
+        "医疗器械",
+        "AI医疗",
+        "智慧医疗",
+        "互联网医疗",
+        "数字医疗",
+        "远程医疗",
+        "健康管理",
+        "精准医疗",
+        "基因",
+        "细胞",
+        "肿瘤",
+        "癌症",
+        "糖尿病",
+        "高血压",
+        "心脏病",
+        "肝病",
+        "流感",
+        "感冒",
+        "营养",
+        "食疗",
+        "运动",
+        "减肥",
+        "睡眠",
+        "医疗科技",
+        "健康科技"
+      ],
+      "sources": [
+        {
+          "name": "网易健康",
+          "type": "web",
+          "url": "https://jiankang.163.com/",
+          "enabled": true,
+          "priority": "high"
+        },
+        {
+          "name": "家庭医生",
+          "type": "web",
+          "url": "https://www.familydoctor.com.cn/zixun/",
+          "enabled": true,
+          "priority": "high"
+        }
+      ]
+    }
+  }
+}

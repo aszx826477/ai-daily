@@ -1,0 +1,24 @@
+{
+  "name": "ai-daily",
+  "version": "1.0.0",
+  "description": "AI前沿技术洞察与大健康资讯日报系统",
+  "main": "scripts/generate-daily.js",
+  "type": "module",
+  "scripts": {
+    "generate": "node scripts/generate-daily.js",
+    "send": "node scripts/send-email.js send",
+    "test": "node scripts/test.js",
+    "cron": "node scripts/cron-task.js",
+    "test-smtp": "node scripts/test-smtp.js"
+  },
+  "dependencies": {
+    "fast-xml-parser": "^4.5.5",
+    "node-fetch": "^3.3.2",
+    "nodemailer": "^6.9.8",
+    "openai": "^6.32.0",
+    "rss-parser": "^3.13.0"
+  },
+  "engines": {
+    "node": ">=18.0.0"
+  }
+}

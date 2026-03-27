@@ -1,0 +1,58 @@
+{
+  "version": "1.0",
+  "description": "AI日报系统全局设置",
+  "email": {
+    "smtp": {
+      "host": "smtp.qq.com",
+      "port": 587,
+      "secure": false,
+      "user": "yelbee@qq.com",
+      "pass": "fymbemxciychbfad",
+      "from": "yelbee@qq.com"
+    },
+    "recipients": [
+      "yelbee@qq.com"
+    ],
+    "subject": "AI日报 - {date}",
+    "format": "html"
+  },
+  "schedule": {
+    "time": "09:00",
+    "timezone": "Asia/Shanghai",
+    "enabled": true
+  },
+  "fetch": {
+    "freshnessDays": 2
+  },
+  "report": {
+    "maxTotalArticles": 50,
+    "maxArticlesPerCategory": 15,
+    "topHighlightsCount": 5,
+    "categoryWeights": {
+      "ai_tech": 4,
+      "war_situation": 3,
+      "medical_health": 2,
+      "shenzhen_real_estate": 1
+    }
+  },
+  "output": {
+    "dir": "./output",
+    "filename": "daily-report-{date}.html",
+    "archive": true,
+    "archiveDays": 30
+  },
+  "ai": {
+    "enabled": true,
+    "baseURL": "https://dashscope.aliyuncs.com/compatible-mode/v1",
+    "apiKey": "sk-2ccecfb6ac1047b596fd14b0467debbb",
+    "model": "qwen3.5-flash",
+    "maxTokens": 1024
+  },
+  "logging": {
+    "dir": "./logs",
+    "level": "info",
+    "file": "./logs/ai-daily.log",
+    "maxSize": "10MB",
+    "maxFiles": 7
+  }
+}
