@@ -11,7 +11,16 @@
       "from": "yelbee@qq.com"
     },
     "recipients": [
-      "yelbee@qq.com"
+      "yelbee@qq.com",
+      "chenwei01@poissonsoft.com",
+      "yangrongfeng@poissonsoft.com",
+      "liaozijie@poissonsoft.com",
+      "jiazhendong@poissonsoft.com",
+      "zhangchicheng@poissonsoft.com",
+      "jiaoyidi@poissonsoft.com",
+      "1526081829@qq.com",
+      "lyt1520996883@gmail.com",
+      "huangjinghong@poissonsoft.com"
     ],
     "subject": "AI日报 - {date}",
     "format": "html"
